@@ -1,4 +1,3 @@
-// import Counter from './components/counter';
 import Movies from './components/movies';
 import './App.css';
 
