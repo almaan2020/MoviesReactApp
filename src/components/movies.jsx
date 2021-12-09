@@ -1,10 +1,11 @@
 import React, { Component } from "react";
 import { getMovies } from "../services/fakeMovieService.js";
 import { getGenres } from "../services/fakeGenreService.js";
-import Like from "../common/like";
 import Pagination from "../common/pagination";
 import { paginate } from "../utility/paginate";
 import Filtering from "../common/filtering";
+import MoviesTable from "./moviesTable.jsx";
+import _ from "lodash";
 
 class Movies extends React.Component {
   state = {
@@ -12,6 +13,7 @@ class Movies extends React.Component {
     genres: [],
     pageSize: 4,
     currentPage: 1,
+    sortColumn: { path: "title", order: "asc" },
   };
 
   componentDidMount() {
@@ -41,23 +43,42 @@ class Movies extends React.Component {
     this.setState({ currentFilter: filter, currentPage: 1 });
   };
 
-  render() {
-    const { length: count } = this.state.movies;
+  handleSort = (sortColumn) => {
+    this.setState({ sortColumn });
+  };
+
+  getPagedData = () => {
     const {
       pageSize,
       currentPage,
       currentFilter,
       movies: allMovies,
+      sortColumn,
     } = this.state;
-
-    if (count === 0) return <p>database is empty.</p>;
 
     const filterMovies =
       currentFilter && currentFilter._id
         ? allMovies.filter((m) => m.genre._id === currentFilter._id)
         : allMovies;
 
-    let movies = paginate(filterMovies, currentPage, pageSize); //local movies (not this.state.movies)
+    const sorted = _.orderBy(
+      filterMovies,
+      [sortColumn.path],
+      [sortColumn.order]
+    );
+
+    let movies = paginate(sorted, currentPage, pageSize);
+
+    return { totalCount: filterMovies.length, data: movies };
+  };
+
+  render() {
+    const { length: count } = this.state.movies;
+    const { pageSize, currentPage, currentFilter, sortColumn } = this.state;
+
+    if (count === 0) return <p>database is empty.</p>;
+
+    const { totalCount, data: movies } = this.getPagedData();
 
     return (
       <div className="row">
@@ -71,49 +92,17 @@ class Movies extends React.Component {
           />
         </div>
         <div className="col-9">
-          <p>showing {filterMovies.length} in the database</p>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Genre</th>
-                <th>Stock</th>
-                <th>Rate</th>
-                <th></th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {
-                //map on local movies
-                movies.map((movie) => (
-                  <tr key={movie._id}>
-                    <td>{movie.title}</td>
-                    <td>{movie.genre.name}</td>
-                    <td>{movie.numberInStock}</td>
-                    <td>{movie.dailyRentalRate}</td>
-                    <td>
-                      <Like
-                        onLike={() => this.handleLike(movie)}
-                        like={movie.like}
-                      />
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => this.handleDelete(movie)}
-                        className="btn btn-danger btn-sm"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              }
-            </tbody>
-          </table>
+          <p>showing {totalCount} in the database</p>
+          <MoviesTable
+            movies={movies}
+            sortColumn={sortColumn}
+            onDelete={this.handleDelete}
+            onLike={this.handleLike}
+            onSort={this.handleSort}
+          />
           <Pagination
             pageSize={pageSize}
-            itemCounts={filterMovies.length}
+            itemCounts={totalCount}
             currentPage={currentPage}
             onPageChange={this.handlePageChange}
           />
