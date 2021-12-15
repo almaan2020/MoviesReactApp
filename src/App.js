@@ -6,8 +6,10 @@ import Navbar from './components/navbar';
 import Customers from './components/customers';
 import Rentals from './components/rentals';
 import Posts from './components/posts';
-import movieFrom from './components/movieFrom';
+import MovieForm from './components/movieForm';
 import NotFound from './components/notFound';
+import LoginForm from './common/loginForm';
+import RegisterForm from './components/registerForm';
 import './App.css';
 
 function App() {
@@ -17,12 +19,15 @@ function App() {
       <div className="row">&nbsp;</div>
 
       <Switch>
-        <Route path="/movies/:id" component={movieFrom} />
+        <Route path="/register" component={RegisterForm} />
+        <Route path="/login" component={LoginForm} />
+        <Route path="/movies/:id" component={MovieForm} />
         <Route path="/customers" render={(props) => <Customers title='Customers' {...props} />} />
         <Route path="/rentals" component={Rentals} />
         <Redirect from="/renta" to="rentals" />
         <Route path="/posts/:year?/:month?" component={Posts} />
         <Route path="/movies" component={Movies} />
+        <Route path="/movies/new" component={MovieForm} />
         <Route path="/not-found" component={NotFound} />
         <Route path="/" exact component={Movies} />
         <Redirect to="/not-found" />
