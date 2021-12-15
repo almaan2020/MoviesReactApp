@@ -1,10 +1,12 @@
 import React, { Component } from "react";
+import { Link } from "react-router-dom";
 import { getMovies } from "../services/fakeMovieService.js";
 import { getGenres } from "../services/fakeGenreService.js";
 import Pagination from "../common/pagination";
 import { paginate } from "../utility/paginate";
 import Filtering from "../common/filtering";
 import MoviesTable from "./moviesTable.jsx";
+import SearchBox from "./searchBox.jsx";
 import _ from "lodash";
 
 class Movies extends React.Component {
@@ -13,8 +15,11 @@ class Movies extends React.Component {
     genres: [],
     pageSize: 4,
     currentPage: 1,
+    currentFilter: null,
+    searchQuery: "",
     sortColumn: { path: "title", order: "asc" },
   };
+  //searchQuery:"" instead null----because in controlled component(SearchBox) shouldn't use null or undefined
 
   componentDidMount() {
     const genres = [{ _id: "", name: "All Genres" }, ...getGenres()];
@@ -40,7 +45,12 @@ class Movies extends React.Component {
   };
 
   handleChangeFilter = (filter) => {
-    this.setState({ currentFilter: filter, currentPage: 1 });
+    this.setState({ currentFilter: filter, searchQuery: "", currentPage: 1 });
+  };
+
+  handleSearch = (query) => {
+    //query = e.currentTarget.value    (searchBox.jsx)
+    this.setState({ searchQuery: query, currentFilter: null, currentPage: 1 });
   };
 
   handleSort = (sortColumn) => {
@@ -52,14 +62,19 @@ class Movies extends React.Component {
       pageSize,
       currentPage,
       currentFilter,
+      searchQuery,
       movies: allMovies,
       sortColumn,
     } = this.state;
 
-    const filterMovies =
-      currentFilter && currentFilter._id
-        ? allMovies.filter((m) => m.genre._id === currentFilter._id)
-        : allMovies;
+    let filterMovies = allMovies;
+    if (searchQuery) {
+      filterMovies = allMovies.filter((m) =>
+        m.title.toLowerCase().startsWith(searchQuery.toLowerCase())
+      );
+    } else if (currentFilter && currentFilter._id) {
+      filterMovies = allMovies.filter((m) => m.genre._id === currentFilter._id);
+    }
 
     const sorted = _.orderBy(
       filterMovies,
@@ -74,7 +89,8 @@ class Movies extends React.Component {
 
   render() {
     const { length: count } = this.state.movies;
-    const { pageSize, currentPage, currentFilter, sortColumn } = this.state;
+    const { pageSize, currentPage, currentFilter, searchQuery, sortColumn } =
+      this.state;
 
     if (count === 0) return <p>database is empty.</p>;
 
@@ -92,7 +108,13 @@ class Movies extends React.Component {
           />
         </div>
         <div className="col-9">
+          <Link className="btn btn-primary" to="/movies/new">
+            New Movie
+          </Link>
+          <div>&nbsp;</div>
           <p>showing {totalCount} in the database</p>
+          <SearchBox value={searchQuery} onChange={this.handleSearch} />
+          <div>&nbsp;</div>
           <MoviesTable
             movies={movies}
             sortColumn={sortColumn}
