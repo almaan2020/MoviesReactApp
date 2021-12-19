@@ -1,13 +1,15 @@
 import React, { Component } from "react";
 import { Link } from "react-router-dom";
-import { getMovies } from "../services/fakeMovieService.js";
-import { getGenres } from "../services/fakeGenreService.js";
+import { toast } from "react-toastify";
+import { getMovies, deleteMovie } from "../services/movieService.js";
+import { getGenres } from "../services/genreService.js";
 import Pagination from "../common/pagination";
 import { paginate } from "../utility/paginate";
 import Filtering from "../common/filtering";
 import MoviesTable from "./moviesTable.jsx";
 import SearchBox from "./searchBox.jsx";
 import _ from "lodash";
+import { getMovie } from "../services/fakeMovieService.js";
 
 class Movies extends React.Component {
   state = {
@@ -21,15 +23,36 @@ class Movies extends React.Component {
   };
   //searchQuery:"" instead null----because in controlled component(SearchBox) shouldn't use null or undefined
 
-  componentDidMount() {
-    const genres = [{ _id: "", name: "All Genres" }, ...getGenres()];
-    this.setState({ movies: getMovies(), genres });
+  //promise states:   pending --> resolved or rejected
+  //const response=await axios.get('https://jsonplaceholder.typicode.com/posts');
+  async componentDidMount() {
+    const { data } = await getGenres(); //getGenres return a promise (not array)---->but data is array
+    const genres = [{ _id: "", name: "All Genres" }, ...data];
+
+    const { data: movies } = await getMovies();
+    this.setState({ movies, genres });
   }
 
-  handleDelete = (movie) => {
-    const movies = this.state.movies.filter((m) => m._id !== movie._id);
+  handleDelete = async (movie) => {
+    const originalMovies = this.state.movies;
+    const movies = originalMovies.filter((m) => m._id !== movie._id);
     //this.setState({ movies: movies });
     this.setState({ movies });
+
+    try {
+      await deleteMovie(movie._id);
+      //throw new Error("");   //for testing when error occurred
+    } catch (ex) {
+      //Expected(404:not Found,400:bad request) -expected by API--- errors for client and dont need log them
+      //display specific error msg:
+      if (ex.response && ex.response.status === 404)
+        toast.error("This movie has already been deleted.");
+      //Unexpected(network down,server down,db down,bug)
+      //log them and display an error : unexpected errors handle by interceptor in all places
+      //  and just when require to check expected error(delete operation) write codes
+      //either expected error(up lines) or unexpected error(httpService), we should undo the changes
+      this.setState({ movies: originalMovies });
+    }
   };
 
   handleLike = (movie) => {
